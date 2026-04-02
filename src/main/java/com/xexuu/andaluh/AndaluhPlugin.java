@@ -13,7 +13,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
+import io.papermc.paper.event.player.AsyncChatEvent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
@@ -51,19 +53,20 @@ public final class AndaluhPlugin extends JavaPlugin implements Listener, Command
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onChat(AsyncPlayerChatEvent event) {
+    public void onChat(AsyncChatEvent event) {
         PlayerSettings settings = getSettings(event.getPlayer());
         if (!settings.enabled) {
             return;
         }
 
-        String message = event.getMessage();
+        String message = PlainTextComponentSerializer.plainText().serialize(event.message());
         if (message.startsWith("/")) {
             return;
         }
 
         String translated = Andaluh.epa(message, settings.mode.getVaf(), DEFAULT_VVF, true, false);
-        event.setMessage(translated);
+        Component updated = Component.text(translated, event.message().style());
+        event.message(updated);
     }
 
     @Override
