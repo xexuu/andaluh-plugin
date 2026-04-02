@@ -1,3 +1,4 @@
 # Andaluh plugin config
 # player settings are stored under "players" by UUID
+debug: false
 players: {}

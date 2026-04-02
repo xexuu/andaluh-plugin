@@ -29,13 +29,16 @@ public final class AndaluhPlugin extends JavaPlugin implements Listener, Command
 
     private static final char DEFAULT_VVF = 'h';
     private static final String CONFIG_PLAYERS = "players";
+    private static final String CONFIG_DEBUG = "debug";
 
     private final Map<UUID, PlayerSettings> settingsByPlayer = new ConcurrentHashMap<>();
+    private boolean debugEnabled = false;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         reloadConfig();
+        debugEnabled = getConfig().getBoolean(CONFIG_DEBUG, false);
         loadSettings();
 
         getServer().getPluginManager().registerEvents(this, this);
@@ -59,13 +62,17 @@ public final class AndaluhPlugin extends JavaPlugin implements Listener, Command
             return;
         }
 
-        String message = PlainTextComponentSerializer.plainText().serialize(event.message());
+        Component baseMessage = event.originalMessage();
+        String message = PlainTextComponentSerializer.plainText().serialize(baseMessage);
         if (message.startsWith("/")) {
             return;
         }
 
         String translated = Andaluh.epa(message, settings.mode.getVaf(), DEFAULT_VVF, true, false);
-        Component updated = Component.text(translated, event.message().style());
+        if (debugEnabled) {
+            getLogger().info("Andaluh chat [" + event.getPlayer().getName() + "] " + message + " -> " + translated);
+        }
+        Component updated = Component.text(translated, baseMessage.style());
         event.message(updated);
     }
 
@@ -166,6 +173,7 @@ public final class AndaluhPlugin extends JavaPlugin implements Listener, Command
     private void loadSettings() {
         settingsByPlayer.clear();
         FileConfiguration config = getConfig();
+        debugEnabled = config.getBoolean(CONFIG_DEBUG, false);
         ConfigurationSection playersSection = config.getConfigurationSection(CONFIG_PLAYERS);
         if (playersSection == null) {
             return;

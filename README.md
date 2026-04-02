@@ -19,6 +19,8 @@ Se acepta `zezeo` como alias de `ceceo`.
 
 El estado por jugador se guarda automaticamente en `config.yml`.
 
+Para depurar, puedes activar `debug: true` en `config.yml` y el plugin imprimira los mensajes antes y despues de la transliteracion.
+
 ## Compatibilidad y Java
 
 - Objetivo: Paper 1.21.11 (Minecraft 1.21.x).
