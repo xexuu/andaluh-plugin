@@ -70,7 +70,8 @@ public final class AndaluhPlugin extends JavaPlugin implements Listener, Command
 
         String translated = Andaluh.epa(message, settings.mode.getVaf(), DEFAULT_VVF, true, false);
         if (debugEnabled) {
-            getLogger().info("Andaluh chat [" + event.getPlayer().getName() + "] " + message + " -> " + translated);
+            String visible = PlainTextComponentSerializer.plainText().serialize(event.message());
+            getLogger().info("Andaluh chat [" + event.getPlayer().getName() + "] orig='" + message + "' visible='" + visible + "' -> '" + translated + "'");
         }
         Component updated = Component.text(translated, baseMessage.style());
         event.message(updated);
@@ -121,8 +122,17 @@ public final class AndaluhPlugin extends JavaPlugin implements Listener, Command
                 saveSettings();
                 player.sendMessage(ChatColor.GREEN + "Modo andaluh: " + mode.getLabel());
                 return true;
+            case "test":
+                if (args.length < 2) {
+                    player.sendMessage(ChatColor.RED + "Uso: /andaluh test <texto>");
+                    return true;
+                }
+                String original = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length));
+                String result = Andaluh.epa(original, settings.mode.getVaf(), DEFAULT_VVF, true, false);
+                player.sendMessage(ChatColor.AQUA + "Andaluh (" + settings.mode.getLabel() + "): " + result);
+                return true;
             default:
-                player.sendMessage(ChatColor.RED + "Uso: /andaluh on|off | /andaluh modo <estandar|ceceo|seseo|heheo>");
+                player.sendMessage(ChatColor.RED + "Uso: /andaluh on|off | /andaluh modo <estandar|ceceo|seseo|heheo> | /andaluh test <texto>");
                 return true;
         }
     }
@@ -138,6 +148,7 @@ public final class AndaluhPlugin extends JavaPlugin implements Listener, Command
             addIfMatches(results, args[0], "on");
             addIfMatches(results, args[0], "off");
             addIfMatches(results, args[0], "modo");
+            addIfMatches(results, args[0], "test");
             return results;
         }
 

@@ -7,6 +7,7 @@ Plugin de Minecraft que transcribe el chat del espanol al andaluh (EPA) usando `
 - `/andaluh on` activa la transcripcion para tu usuario.
 - `/andaluh off` desactiva la transcripcion para tu usuario.
 - `/andaluh modo <estandar|ceceo|seseo|heheo>` cambia el modo de salida.
+- `/andaluh test <texto>` prueba la transliteracion sin usar el chat.
 
 Notas sobre modos:
 
