@@ -1,0 +1,94 @@
+name: Sync Andaluh-Java Release
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+  repository_dispatch:
+    types: [andaluh_java_release]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Fetch latest andaluh-java release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=$(gh release view -R xexuu/andaluh-java --json tagName -q .tagName 2>/dev/null || true)
+          if [ -z "$TAG" ]; then
+            echo "No andaluh-java releases found."
+            exit 0
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Update submodule to release tag
+        if: steps.release.outputs.tag != ''
+        run: |
+          git -C andaluh-java fetch --tags
+          git -C andaluh-java checkout "${{ steps.release.outputs.tag }}"
+
+      - name: Check for submodule changes
+        id: changes
+        if: steps.release.outputs.tag != ''
+        run: |
+          if git status --porcelain andaluh-java | grep -q .; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Bump plugin version
+        id: bump
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          import sys
+
+          path = "pom.xml"
+          data = open(path, "r", encoding="utf-8").read()
+          match = re.search(r"(<artifactId>andaluh-plugin</artifactId>\s*<version>)([^<]+)(</version>)", data)
+          if not match:
+            print("Version tag not found", file=sys.stderr)
+            sys.exit(1)
+          current = match.group(2).strip()
+          parts = current.split(".")
+          if len(parts) < 3 or not parts[-1].isdigit():
+            print(f"Unsupported version: {current}", file=sys.stderr)
+            sys.exit(1)
+          parts[-1] = str(int(parts[-1]) + 1)
+          new_version = ".".join(parts)
+          data = data[:match.start(2)] + new_version + data[match.end(2):]
+          open(path, "w", encoding="utf-8").write(data)
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+            fh.write(f"version={new_version}\n")
+          PY
+
+      - name: Commit and tag
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add andaluh-java pom.xml
+          git commit -m "chore: update andaluh-java to ${{ steps.release.outputs.tag }}"
+
+          NEW_VERSION="${{ steps.bump.outputs.version }}"
+          if git tag -l "v$NEW_VERSION" | grep -q .; then
+            echo "Tag v$NEW_VERSION already exists, skipping tag."
+          else
+            git tag "v$NEW_VERSION"
+          fi
+
+          git push origin HEAD:main --tags
