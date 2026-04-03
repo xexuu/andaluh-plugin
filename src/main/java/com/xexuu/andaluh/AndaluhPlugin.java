@@ -18,6 +18,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import net.kyori.adventure.text.TextReplacementConfig;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -25,12 +26,16 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class AndaluhPlugin extends JavaPlugin implements Listener, CommandExecutor, TabCompleter {
 
     private static final char DEFAULT_VVF = 'h';
     private static final String CONFIG_PLAYERS = "players";
     private static final String CONFIG_DEBUG = "debug";
+    
+    private static final Pattern COLOR_CODES = Pattern.compile("(?i)[&§][0-9a-fk-orx]|(?i)[&§]#[0-9a-f]{6}|<[/]?[a-zA-Z0-9_:-]+>");
 
     private final Map<UUID, PlayerSettings> settingsByPlayer = new ConcurrentHashMap<>();
     private boolean debugEnabled = false;
@@ -55,6 +60,29 @@ public final class AndaluhPlugin extends JavaPlugin implements Listener, Command
     public void onDisable() {
         saveSettings();
     }
+    
+    private String translatePreservingColors(String text, char vaf) {
+        Matcher matcher = COLOR_CODES.matcher(text);
+        List<String> ignores = new ArrayList<>();
+        StringBuffer sb = new StringBuffer();
+        
+        char currentToken = '\uE000';
+        while (matcher.find()) {
+            ignores.add(matcher.group(0));
+            matcher.appendReplacement(sb, Matcher.quoteReplacement(String.valueOf(currentToken)));
+            currentToken++;
+        }
+        matcher.appendTail(sb);
+
+        String translated = Andaluh.epa(sb.toString(), vaf, DEFAULT_VVF, true, false);
+        
+        char replaceToken = '\uE000';
+        for (String ignore : ignores) {
+            translated = translated.replace(String.valueOf(replaceToken), ignore);
+            replaceToken++;
+        }
+        return translated;
+    }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onChat(AsyncChatEvent event) {
@@ -69,14 +97,26 @@ public final class AndaluhPlugin extends JavaPlugin implements Listener, Command
             return;
         }
 
-        String translated = Andaluh.epa(message, settings.mode.getVaf(), DEFAULT_VVF, true, false);
+        Component currentMessage = event.message();
+
+        Component updated = currentMessage.replaceText(TextReplacementConfig.builder()
+            .match("(?s).*")
+            .replacement((matchResult, builder) -> {
+                String content = matchResult.group();
+                if (content == null || content.isEmpty()) return null;
+                
+                String translated = translatePreservingColors(content, settings.mode.getVaf());
+                return Component.text(translated);
+            })
+            .build());
+
         if (debugEnabled) {
-            String visible = PlainTextComponentSerializer.plainText().serialize(event.message());
-            getLogger().info("Andaluh chat [" + event.getPlayer().getName() + "] orig='" + message + "' visible='" + visible + "' -> '" + translated + "'");
-            logCodepoints("orig", message);
-            logCodepoints("visible", visible);
+            String visibleBefore = PlainTextComponentSerializer.plainText().serialize(currentMessage);
+            String visibleAfter = PlainTextComponentSerializer.plainText().serialize(updated);
+            getLogger().info("Andaluh chat [" + event.getPlayer().getName() + "] orig='" + message + "' visibleBefore='" + visibleBefore + "' visibleAfter='" + visibleAfter + "'");
+            logCodepoints("visibleAfter", visibleAfter);
         }
-        Component updated = Component.text(translated, baseMessage.style());
+        
         event.message(updated);
     }
 
@@ -131,7 +171,7 @@ public final class AndaluhPlugin extends JavaPlugin implements Listener, Command
                     return true;
                 }
                 String original = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
-                String result = Andaluh.epa(original, settings.mode.getVaf(), DEFAULT_VVF, true, false);
+                String result = translatePreservingColors(original, settings.mode.getVaf());
                 player.sendMessage(ChatColor.AQUA + "Andaluh (" + settings.mode.getLabel() + "): " + result);
                 if (debugEnabled) {
                     getLogger().info("Andaluh test [" + player.getName() + "] input='" + original + "' -> '" + result + "'");
