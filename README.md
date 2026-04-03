@@ -1,6 +1,14 @@
 # Andaluh Chat para Minecraft
 
-Un plugin de Minecraft (para Paper/Spigot) que permite a los jugadores transcribir automáticamente sus mensajes en el chat del español estándar a la **Propuesta de Ortografía Andaluza (EPA)**. Este plugin utiliza internamente la librería `andaluh-java` (basada en el proyecto original `andaluh-py` de Andalugeeks).
+Un plugin de Minecraft (para Paper/Spigot) que permite a los jugadores transcribir automáticamente sus mensajes en el chat del español estándar a la **Propuesta de Ortografía Andaluza (EPA)**.
+
+## Créditos y Origen
+
+El motor de traducción que da vida a este plugin está basado en el increíble trabajo de la comunidad de **Andalugeeks**. 
+- El proyecto original de transliteración es [andalugeeks/andaluh-py](https://github.com/andalugeeks/andaluh-py).
+- La librería de Java utilizada internamente es un *fork* actualizado y mantenido en este repositorio, basado originalmente en [andalugeeks/andaluh-java](https://github.com/andalugeeks/andaluh-java).
+
+Todos los créditos por la creación de las reglas ortográficas, la lógica base y el proyecto original pertenecen a **Andalugeeks**. Este plugin para Minecraft es un proyecto derivado construido para llevar esa funcionalidad a los servidores de juego.
 
 ## Características Principales
 
